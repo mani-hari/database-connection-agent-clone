@@ -160,7 +160,7 @@ Based on user selection, you **MUST** read and follow the corresponding instruct
 | **1. GCE VM** | **READ and FOLLOW `GCE-VM.md`** - Contains Steps 2A, 3A, 4A for GCE VM connection |
 | **2. Local IDE / Laptop** | **READ and FOLLOW `LOCAL-IDE.md`** - Contains Steps 2B, 3B, 4B for local development |
 | **3. GKE** | **READ and FOLLOW `GKE.md`** - Contains Steps 2C, 3C, 4C for Kubernetes connection |
-| **4. Cloud Run** | Display: "Cloud Run support coming soon. Check back later." |
+| **4. Cloud Run** | **READ and FOLLOW `CLOUD-RUN.md`** - Contains Steps 2D, 3D, 4D for serverless connection |
 | **5. Compute Engine (managed)** | Display: "Managed services support coming soon. Check back later." |
 | **6. Other** | Display: "For other platforms, see: https://cloud.google.com/sql/docs/postgres/connect-overview" |
 
@@ -189,7 +189,8 @@ File: `gemini-extension.json`
 ```json
 {
   "name": "database-connect-assist",
-  "version": "3.0.0",
-  "description": "Gemini CLI extension for Cloud SQL connections to GCE VMs, local IDE/laptop, and GKE clusters with network validation and code generation"
+  "version": "4.0.0",
+  "description": "Gemini CLI extension for Cloud SQL connections to GCE VMs, local IDE/laptop, GKE clusters, and Cloud Run with network validation and code generation",
+  "contextFileName": "GEMINI.md"
 }
 ```
