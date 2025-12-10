@@ -1,0 +1,5 @@
+{
+  "name": "database-connect-assist",
+  "version": "2.0.0",
+  "description": "Gemini CLI extension that guides users through Cloud SQL selection, GCE VM targeting, network validation, and connection code generation"
+}
