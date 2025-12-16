@@ -11,7 +11,7 @@ Follow these steps in Cloud Shell to register and use the extension.
    ```
 2. **Install the extension from this repo (registers the tool):**
    ```bash
-   gemini extensions install https://github.com/manigoogle/agentlabs-easyconnect
+   gemini extensions install https://github.com/mani-hari/database-connection-agent-clone
    ```
 3. **Confirm it registered correctly:**
    ```bash
