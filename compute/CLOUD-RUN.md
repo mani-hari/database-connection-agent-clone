@@ -1,5 +1,7 @@
 # Cloud Run → Cloud SQL Connection Guide
 
+> **Location:** `compute/CLOUD-RUN.md`
+
 This file contains the complete instructions for connecting a Cloud Run service to Cloud SQL.
 **Prerequisites:** User has completed Step 0 (Authentication) and Step 1 (Cloud SQL Selection) from GEMINI.md.
 
@@ -9,6 +11,12 @@ This file contains the complete instructions for connecting a Cloud Run service 
 - `CLOUDSQL_INSTANCE_NAME` - Selected Cloud SQL instance
 - `CLOUDSQL_REGION` - Cloud SQL region
 - `CLOUDSQL_DATABASE_VERSION` - Database type (POSTGRES_XX, MYSQL_X_X, SQLSERVER_XXXX)
+
+**Component References:**
+- UI patterns: See `../components/UI-CARDS.md` for ASCII card templates
+- Code snippets: See `../components/CODE-SNIPPETS.md` for connection code
+- Validation logic: See `../components/NETWORK-VALIDATION.md` for shared checks
+- Remediation: See `../components/REMEDIATION.md` for common fix procedures
 
 ---
 
@@ -55,6 +63,8 @@ Display confirmation:
 ```
 ✅ Service: [CLOUDRUN_SERVICE_NAME] in [CLOUDRUN_REGION]
 ```
+
+**Auto-Complete Mode:** If user selected auto-complete in Step 2.1, skip "Ready to proceed?" prompts and continue directly. Still pause for consent before modifying resources.
 
 **→ Ask: "Ready to proceed to Step 3 (Connection Configuration)? (yes/no)"**
 

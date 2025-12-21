@@ -1,4 +1,5 @@
 # GCE VM → Cloud SQL Connection Guide
+> **Location:** `compute/GCE-VM.md`
 
 This file contains the complete instructions for connecting a GCE VM to Cloud SQL.
 **Prerequisites:** User has completed Step 0 (Authentication) and Step 1 (Cloud SQL Selection) from GEMINI.md.
@@ -9,6 +10,12 @@ This file contains the complete instructions for connecting a GCE VM to Cloud SQ
 - `CLOUDSQL_INSTANCE_NAME` - Selected Cloud SQL instance
 - `CLOUDSQL_REGION` - Cloud SQL region
 - `CLOUDSQL_DATABASE_VERSION` - Database type (POSTGRES_XX, MYSQL_X_X, SQLSERVER_XXXX)
+
+**Component References:**
+- UI patterns: See `../components/UI-CARDS.md` for ASCII card templates
+- Code snippets: See `../components/CODE-SNIPPETS.md` for connection code
+- Validation logic: See `../components/NETWORK-VALIDATION.md` for shared checks
+- Remediation: See `../components/REMEDIATION.md` for common fix procedures
 
 ---
 
@@ -37,6 +44,8 @@ Display confirmation:
 ```
 
 **→ Ask: "Ready to proceed to Step 3 (Network Validation)? (yes/no)"**
+
+**Auto-Complete Mode:** If user selected auto-complete in Step 2.1, skip "Ready to proceed?" prompts and continue directly. Still pause for consent before modifying resources.
 
 ---
 
