@@ -171,30 +171,34 @@ Enter your choice (1-5):
 
 ---
 
-## Step 2.1: Auto-Complete Option
+## Step 2.1: Setup Flow Preference
 
 After the user selects a compute destination (and the specific resource name in the destination file), offer this option **once**:
 
 ```
-Would you like me to complete the setup automatically?
+How would you like to proceed?
 
-• Yes - I'll run network validation, apply any needed fixes, and generate connection code without asking at each step. I'll only pause if I encounter an error or need credentials.
+1. Guide me step-by-step (Recommended)
+   → Network validation → Remediation (if needed) → Connection code
+   I'll explain each step and ask for confirmation before proceeding.
 
-• No - I'll guide you step-by-step and ask for confirmation before each action.
+2. Run everything without asking
+   → Complete setup automatically, pause only for errors or credentials.
 
-Enter (yes/no):
+Enter (1 or 2):
 ```
 
-**If user selects "Yes" (Auto-Complete Mode):**
+**If user selects "1" (Step-by-Step - Recommended):**
+- Ask "Ready to proceed?" after each step
+- Explain what will happen before each action
+- This is the default behavior documented in the compute files
+
+**If user selects "2" (Auto-Complete):**
 - Proceed through all remaining steps without intermediate confirmation prompts
 - Still display progress and what actions are being taken
 - Still require consent before executing commands that **modify** resources (patches, creates, deletes)
 - Still pause and ask if any errors or ambiguous decisions arise
 - At the end, display the full connection summary and code
-
-**If user selects "No" (Step-by-Step Mode):**
-- Continue with the standard flow: ask "Ready to proceed?" after each step
-- This is the default behavior documented in the compute files
 
 **Note:** This option is asked once after resource selection. Do not ask repeatedly.
 
