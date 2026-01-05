@@ -1,22 +1,6 @@
 # Cloud Run → Cloud SQL Connection Guide
 
-> **Location:** `compute/CLOUD-RUN.md`
-
-This file contains the complete instructions for connecting a Cloud Run service to Cloud SQL.
 **Prerequisites:** User has completed Step 0 (Authentication) and Step 1 (Cloud SQL Selection) from GEMINI.md.
-
-**Variables available from previous steps:**
-- `PROJECT_ID` - GCP project ID
-- `USER_EMAIL` - Authenticated user email
-- `CLOUDSQL_INSTANCE_NAME` - Selected Cloud SQL instance
-- `CLOUDSQL_REGION` - Cloud SQL region
-- `CLOUDSQL_DATABASE_VERSION` - Database type (POSTGRES_XX, MYSQL_X_X, SQLSERVER_XXXX)
-
-**Component References:**
-- UI patterns: See `../components/UI-CARDS.md` for ASCII card templates
-- Code snippets: See `../components/CODE-SNIPPETS.md` for connection code
-- Validation logic: See `../components/NETWORK-VALIDATION.md` for shared checks
-- Remediation: See `../components/REMEDIATION.md` for common fix procedures
 
 ---
 
@@ -45,8 +29,8 @@ Enter choice (1-2):
 Present services as numbered list. Accept number or name input.
 
 Capture and store:
-- `CLOUDRUN_SERVICE_NAME`
-- `CLOUDRUN_REGION`
+- `{CLOUDRUN_SERVICE_NAME}`
+- `{CLOUDRUN_REGION}`
 
 **If Option 2 (New Service):**
 Ask for planned service name and region:
@@ -56,12 +40,12 @@ Enter the region (e.g., us-central1):
 ```
 
 Store:
-- `CLOUDRUN_SERVICE_NAME`
-- `CLOUDRUN_REGION`
+- `{CLOUDRUN_SERVICE_NAME}`
+- `{CLOUDRUN_REGION}`
 
 Display confirmation:
 ```
-✅ Service: [CLOUDRUN_SERVICE_NAME] in [CLOUDRUN_REGION]
+✅ Service: {{CLOUDRUN_SERVICE_NAME}} in {{CLOUDRUN_REGION}}
 ```
 
 **Auto-Complete Mode:** If user selected auto-complete in Step 2.1, skip "Ready to proceed?" prompts and continue directly. Still pause for consent before modifying resources.
@@ -74,7 +58,7 @@ Display confirmation:
 
 ### 3D.1 Gather Cloud SQL Details
 ```bash
-gcloud sql instances describe CLOUDSQL_INSTANCE_NAME --format="yaml(connectionName,ipAddresses,settings.ipConfiguration.privateNetwork,region)"
+gcloud sql instances describe {CLOUDSQL_INSTANCE_NAME} --format="yaml(connectionName,ipAddresses,settings.ipConfiguration.privateNetwork,region)"
 ```
 
 Extract and store:
@@ -84,7 +68,7 @@ Extract and store:
 
 ### 3D.2 Check Existing Service Configuration (if existing service)
 ```bash
-gcloud run services describe CLOUDRUN_SERVICE_NAME --region=CLOUDRUN_REGION --format="yaml(spec.template.metadata.annotations,spec.template.spec.serviceAccountName)"
+gcloud run services describe {CLOUDRUN_SERVICE_NAME} --region={CLOUDRUN_REGION} --format="yaml(spec.template.metadata.annotations,spec.template.spec.serviceAccountName)"
 ```
 
 ### 3D.3 Connection Method Selection
@@ -92,8 +76,8 @@ gcloud run services describe CLOUDRUN_SERVICE_NAME --region=CLOUDRUN_REGION --fo
 ╔══════════════════════════════════════════════════════════════════╗
 ║                 CLOUD RUN CONNECTION OPTIONS                      ║
 ╠══════════════════════════════════════════════════════════════════╣
-║ Cloud SQL Instance: [CLOUDSQL_INSTANCE_NAME]                      ║
-║ Connection Name: [CLOUDSQL_CONNECTION_NAME]                       ║
+║ Cloud SQL Instance: {{CLOUDSQL_INSTANCE_NAME}}                      ║
+║ Connection Name: {CLOUDSQL_CONNECTION_NAME}                       ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║ OPTION │ METHOD                    │ BEST FOR                    ║
 ╠────────┼───────────────────────────┼─────────────────────────────╣
@@ -116,7 +100,7 @@ Select connection method (1-3):
 
 **Check or create service account:**
 ```bash
-gcloud iam service-accounts list --filter="email:cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com" --format="value(email)"
+gcloud iam service-accounts list --filter="email:cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com" --format="value(email)"
 ```
 
 **If not exists, create:**
@@ -127,8 +111,8 @@ gcloud iam service-accounts create cloudrun-sql-sa \
 
 **Grant Cloud SQL Client role:**
 ```bash
-gcloud projects add-iam-policy-binding PROJECT_ID \
-  --member="serviceAccount:cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding {PROJECT_ID} \
+  --member="serviceAccount:cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/cloudsql.client"
 ```
 
@@ -140,19 +124,19 @@ This method uses Cloud Run's native Cloud SQL integration via Unix socket.
 
 **For existing service - add Cloud SQL connection:**
 ```bash
-gcloud run services update CLOUDRUN_SERVICE_NAME \
-  --region=CLOUDRUN_REGION \
+gcloud run services update {CLOUDRUN_SERVICE_NAME} \
+  --region={CLOUDRUN_REGION} \
   --add-cloudsql-instances=CLOUDSQL_CONNECTION_NAME \
-  --service-account=cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com
+  --service-account=cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com
 ```
 
 **For new deployment:**
 ```bash
-gcloud run deploy CLOUDRUN_SERVICE_NAME \
-  --region=CLOUDRUN_REGION \
+gcloud run deploy {CLOUDRUN_SERVICE_NAME} \
+  --region={CLOUDRUN_REGION} \
   --image=YOUR_IMAGE \
   --add-cloudsql-instances=CLOUDSQL_CONNECTION_NAME \
-  --service-account=cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com \
+  --service-account=cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com \
   --set-env-vars="INSTANCE_CONNECTION_NAME=CLOUDSQL_CONNECTION_NAME,DB_NAME=your-database,DB_USER=your-user"
 ```
 
@@ -166,18 +150,18 @@ gcloud run deploy CLOUDRUN_SERVICE_NAME \
 **Step 1: Create VPC Connector (if not exists):**
 ```bash
 gcloud compute networks vpc-access connectors create cloudrun-connector \
-  --region=CLOUDRUN_REGION \
+  --region={CLOUDRUN_REGION} \
   --network=VPC_NAME \
   --range=10.8.0.0/28
 ```
 
 **Step 2: Deploy/Update with VPC Connector:**
 ```bash
-gcloud run services update CLOUDRUN_SERVICE_NAME \
-  --region=CLOUDRUN_REGION \
+gcloud run services update {CLOUDRUN_SERVICE_NAME} \
+  --region={CLOUDRUN_REGION} \
   --vpc-connector=cloudrun-connector \
   --vpc-egress=private-ranges-only \
-  --service-account=cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com \
+  --service-account=cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com \
   --set-env-vars="DB_HOST=CLOUDSQL_PRIVATE_IP,DB_PORT=5432,DB_NAME=your-database,DB_USER=your-user"
 ```
 
@@ -185,12 +169,12 @@ gcloud run services update CLOUDRUN_SERVICE_NAME \
 
 **Deploy/Update with Direct VPC Egress:**
 ```bash
-gcloud run services update CLOUDRUN_SERVICE_NAME \
-  --region=CLOUDRUN_REGION \
+gcloud run services update {CLOUDRUN_SERVICE_NAME} \
+  --region={CLOUDRUN_REGION} \
   --network=VPC_NAME \
   --subnet=SUBNET_NAME \
   --vpc-egress=all-traffic \
-  --service-account=cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com \
+  --service-account=cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com \
   --set-env-vars="DB_HOST=CLOUDSQL_PRIVATE_IP,DB_PORT=5432,DB_NAME=your-database,DB_USER=your-user"
 ```
 
@@ -198,8 +182,8 @@ gcloud run services update CLOUDRUN_SERVICE_NAME \
 
 **Using environment variables (for development):**
 ```bash
-gcloud run services update CLOUDRUN_SERVICE_NAME \
-  --region=CLOUDRUN_REGION \
+gcloud run services update {CLOUDRUN_SERVICE_NAME} \
+  --region={CLOUDRUN_REGION} \
   --set-env-vars="DB_USER=your-user,DB_PASS=your-password,DB_NAME=your-database"
 ```
 
@@ -215,22 +199,22 @@ echo -n "your-database" | gcloud secrets create db-name --data-file=-
 Grant access to service account:
 ```bash
 gcloud secrets add-iam-policy-binding db-user \
-  --member="serviceAccount:cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/secretmanager.secretAccessor"
 
 gcloud secrets add-iam-policy-binding db-password \
-  --member="serviceAccount:cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/secretmanager.secretAccessor"
 
 gcloud secrets add-iam-policy-binding db-name \
-  --member="serviceAccount:cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/secretmanager.secretAccessor"
 ```
 
 Deploy with secrets:
 ```bash
-gcloud run services update CLOUDRUN_SERVICE_NAME \
-  --region=CLOUDRUN_REGION \
+gcloud run services update {CLOUDRUN_SERVICE_NAME} \
+  --region={CLOUDRUN_REGION} \
   --set-secrets="DB_USER=db-user:latest,DB_PASS=db-password:latest,DB_NAME=db-name:latest"
 ```
 
@@ -244,8 +228,8 @@ gcloud run services update CLOUDRUN_SERVICE_NAME \
 ```
 CONNECTION SUMMARY
 ─────────────────────────────────
-Cloud Run Service: [CLOUDRUN_SERVICE_NAME]
-Cloud SQL Instance: [CLOUDSQL_CONNECTION_NAME]
+Cloud Run Service: {{CLOUDRUN_SERVICE_NAME}}
+Cloud SQL Instance: {CLOUDSQL_CONNECTION_NAME}
 Connection Method: [Built-in / VPC Connector / Direct VPC]
 ─────────────────────────────────
 ```
@@ -550,17 +534,17 @@ cloud-sql-python-connector[pg8000]==1.6.0
 
 **Check service status:**
 ```bash
-gcloud run services describe CLOUDRUN_SERVICE_NAME --region=CLOUDRUN_REGION --format="yaml(status)"
+gcloud run services describe {CLOUDRUN_SERVICE_NAME} --region={CLOUDRUN_REGION} --format="yaml(status)"
 ```
 
 **View logs:**
 ```bash
-gcloud run services logs read CLOUDRUN_SERVICE_NAME --region=CLOUDRUN_REGION --limit=50
+gcloud run services logs read {CLOUDRUN_SERVICE_NAME} --region={CLOUDRUN_REGION} --limit=50
 ```
 
 **Test the service:**
 ```bash
-curl $(gcloud run services describe CLOUDRUN_SERVICE_NAME --region=CLOUDRUN_REGION --format="value(status.url)")
+curl $(gcloud run services describe {CLOUDRUN_SERVICE_NAME} --region={CLOUDRUN_REGION} --format="value(status.url)")
 ```
 
 ### 4D.6 Production Recommendations
@@ -600,20 +584,17 @@ Display:
 ✅ Cloud Run → Cloud SQL connection setup complete!
 
 Summary:
-- Cloud Run Service: [CLOUDRUN_SERVICE_NAME]
-- Cloud SQL Instance: [CLOUDSQL_CONNECTION_NAME]
+- Cloud Run Service: {{CLOUDRUN_SERVICE_NAME}}
+- Cloud SQL Instance: {CLOUDSQL_CONNECTION_NAME}
 - Connection Method: [Built-in / VPC Connector / Direct VPC]
-- Service Account: cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com
+- Service Account: cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com
 
 Deploy command:
-gcloud run deploy CLOUDRUN_SERVICE_NAME \
-  --region=CLOUDRUN_REGION \
+gcloud run deploy {CLOUDRUN_SERVICE_NAME} \
+  --region={CLOUDRUN_REGION} \
   --image=YOUR_IMAGE \
-  --add-cloudsql-instances=CLOUDSQL_CONNECTION_NAME \
-  --service-account=cloudrun-sql-sa@PROJECT_ID.iam.gserviceaccount.com
+  --add-cloudsql-instances={CLOUDSQL_CONNECTION_NAME} \
+  --service-account=cloudrun-sql-sa@{PROJECT_ID}.iam.gserviceaccount.com
 
-Next steps:
-1. Build and push your container image
-2. Deploy with the command above
-3. Verify connection in Cloud Run logs
+💡 Verify connection in Cloud Run logs after deploying
 ```

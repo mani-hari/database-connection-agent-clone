@@ -1,21 +1,6 @@
 # GCE VM → Cloud SQL Connection Guide
-> **Location:** `compute/GCE-VM.md`
 
-This file contains the complete instructions for connecting a GCE VM to Cloud SQL.
 **Prerequisites:** User has completed Step 0 (Authentication) and Step 1 (Cloud SQL Selection) from GEMINI.md.
-
-**Variables available from previous steps:**
-- `PROJECT_ID` - GCP project ID
-- `USER_EMAIL` - Authenticated user email
-- `CLOUDSQL_INSTANCE_NAME` - Selected Cloud SQL instance
-- `CLOUDSQL_REGION` - Cloud SQL region
-- `CLOUDSQL_DATABASE_VERSION` - Database type (POSTGRES_XX, MYSQL_X_X, SQLSERVER_XXXX)
-
-**Component References:**
-- UI patterns: See `../components/UI-CARDS.md` for ASCII card templates
-- Code snippets: See `../components/CODE-SNIPPETS.md` for connection code
-- Validation logic: See `../components/NETWORK-VALIDATION.md` for shared checks
-- Remediation: See `../components/REMEDIATION.md` for common fix procedures
 
 ---
 
@@ -32,15 +17,11 @@ gcloud compute instances list --format="table(name,zone,machineType.basename(),s
 ```
 
 ### 2A.3 User Selection
-Present VMs as numbered list. Accept number or name input.
-
-Capture and store:
-- `VM_NAME`
-- `VM_ZONE`
+Present VMs as numbered list. Accept number or name input. Capture `VM_NAME` and `VM_ZONE`.
 
 Display confirmation:
 ```
-✅ Selected VM: [VM_NAME] in zone [VM_ZONE]
+✅ Selected VM: {VM_NAME} in zone {VM_ZONE}
 ```
 
 **→ Ask: "Ready to proceed to Step 3 (Network Validation)? (yes/no)"**
@@ -53,25 +34,23 @@ Display confirmation:
 
 ### 3A.1 Gather Cloud SQL Details
 ```bash
-gcloud sql instances describe CLOUDSQL_INSTANCE_NAME --format="yaml(name,connectionName,ipAddresses,settings.ipConfiguration.privateNetwork,settings.ipConfiguration.authorizedNetworks,region)"
+gcloud sql instances describe {CLOUDSQL_INSTANCE_NAME} --format="yaml(name,connectionName,ipAddresses,settings.ipConfiguration.privateNetwork,region)"
 ```
 
 Extract and store:
 - `CLOUDSQL_PRIVATE_IP` (from ipAddresses where type=PRIVATE)
 - `CLOUDSQL_PUBLIC_IP` (from ipAddresses where type=PRIMARY)
 - `CLOUDSQL_VPC` (from settings.ipConfiguration.privateNetwork)
-- `CLOUDSQL_CONNECTION_NAME` (format: project:region:instance)
+- `CLOUDSQL_CONNECTION_NAME` (from connectionName field)
 
 ### 3A.2 Gather GCE VM Details
 ```bash
-gcloud compute instances describe VM_NAME --zone=VM_ZONE --format="yaml(name,networkInterfaces[].network,networkInterfaces[].networkIP,networkInterfaces[].accessConfigs[].natIP,networkInterfaces[].subnetwork)"
+gcloud compute instances describe {VM_NAME} --zone={VM_ZONE} --format="yaml(name,networkInterfaces[].network,networkInterfaces[].networkIP)"
 ```
 
 Extract and store:
 - `VM_INTERNAL_IP` (from networkInterfaces[0].networkIP)
-- `VM_EXTERNAL_IP` (from networkInterfaces[0].accessConfigs[0].natIP, may be null)
-- `VM_VPC` (from networkInterfaces[0].network)
-- `VM_SUBNET` (from networkInterfaces[0].subnetwork)
+- `VM_VPC` (from networkInterfaces[0].network, extract VPC name from full path)
 
 ### 3A.3 Network Analysis Output
 Display results in this exact format:
@@ -80,77 +59,65 @@ Display results in this exact format:
 ╔══════════════════════════════════════════════════════════════════╗
 ║                    NETWORK ANALYSIS RESULTS                       ║
 ╠══════════════════════════════════════════════════════════════════╣
-║ Cloud SQL Instance: [CLOUDSQL_INSTANCE_NAME]                      ║
-║ GCE VM: [VM_NAME]                                                 ║
+║ Cloud SQL Instance: {CLOUDSQL_INSTANCE_NAME}                     ║
+║ GCE VM: {VM_NAME}                                                 ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║ CHECK                          │ STATUS   │ DETAILS               ║
 ╠────────────────────────────────┼──────────┼───────────────────────╣
-║ Cloud SQL Private IP           │ ✅ / ❌  │ [IP or "Not enabled"] ║
-║ Cloud SQL Public IP            │ ✅ / ❌  │ [IP or "Not enabled"] ║
-║ VM Internal IP                 │ ✅ / ❌  │ [IP]                  ║
-║ VM External IP                 │ ✅ / ❌  │ [IP or "None"]        ║
-║ Same VPC Network               │ ✅ / ❌  │ [VPC names]           ║
-║ Private Services Access        │ ✅ / ❌  │ [Status]              ║
+║ Cloud SQL Private IP           │ ✅ / ❌  │ {IP or "Not enabled"} ║
+║ VM Internal IP                 │ ✅       │ {VM_INTERNAL_IP}      ║
+║ Same VPC Network               │ ✅ / ❌  │ {VPC comparison}      ║
+║ Private Services Access        │ ✅ / ❌  │ {Status}              ║
 ╠══════════════════════════════════════════════════════════════════╣
-║ RECOMMENDED CONNECTION METHOD: [Private IP / Public IP / Proxy]  ║
+║ RECOMMENDED: {Private IP / Public IP with Auth Proxy}            ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
 ### 3A.4 Connectivity Decision Tree
 
 **If Private IP available AND same VPC:**
-- Recommend: Direct connection via Private IP
-- No additional setup required
+- ✅ Direct connection via Private IP (proceed to Step 4)
 
 **If Private IP available BUT different VPC:**
-- Recommend: VPC Peering or move VM to Cloud SQL VPC
-- Offer remediation (see 3A.5)
+- ⚠️ VPCs don't match - offer remediation (see 3A.5)
 
 **If only Public IP available:**
-- Warn: Less secure, recommend enabling Private IP
-- Options: Cloud SQL Auth Proxy or Authorized Networks
-
-**If no connectivity path exists:**
-- Offer to enable Private IP on Cloud SQL
+- ⚠️ Less secure - recommend Cloud SQL Auth Proxy connection
 
 ### 3A.5 Remediation Commands (Execute only with user consent)
 
-**Enable Private IP on Cloud SQL:**
+**If Cloud SQL needs Private IP enabled:**
 ```bash
-gcloud sql instances patch CLOUDSQL_INSTANCE_NAME \
-  --network=projects/PROJECT_ID/global/networks/VPC_NAME \
+gcloud sql instances patch {CLOUDSQL_INSTANCE_NAME} \
+  --network={VM_VPC} \
   --no-assign-ip
 ```
+*Note: This requires Private Services Access to be set up (see below).*
 
 **Check Private Services Access:**
 ```bash
-gcloud services vpc-peerings list --network=VPC_NAME --project=PROJECT_ID
+gcloud services vpc-peerings list --network={VM_VPC} --project={PROJECT_ID}
 ```
 
 **Create Private Services Access (if missing):**
 ```bash
-# Step 1: Allocate IP range
-gcloud compute addresses create google-managed-services-VPC_NAME \
+# Allocate IP range
+gcloud compute addresses create google-managed-services-{VM_VPC} \
   --global \
   --purpose=VPC_PEERING \
   --prefix-length=16 \
-  --network=VPC_NAME \
-  --project=PROJECT_ID
+  --network={VM_VPC} \
+  --project={PROJECT_ID}
 
-# Step 2: Create peering connection
+# Create peering connection
 gcloud services vpc-peerings connect \
   --service=servicenetworking.googleapis.com \
-  --ranges=google-managed-services-VPC_NAME \
-  --network=VPC_NAME \
-  --project=PROJECT_ID
+  --ranges=google-managed-services-{VM_VPC} \
+  --network={VM_VPC} \
+  --project={PROJECT_ID}
 ```
 
-**Check Firewall Rules (egress to Cloud SQL ports):**
-```bash
-gcloud compute firewall-rules list --filter="network:VPC_NAME AND direction=EGRESS" --format="table(name,direction,allowed,targetTags)"
-```
-
-After remediation, re-run validation checks.
+After remediation, re-run validation (Step 3A.1).
 
 **→ Ask: "Ready to proceed to Step 4 (Connection Testing)? (yes/no)"**
 
@@ -158,105 +125,53 @@ After remediation, re-run validation checks.
 
 ## Step 4A: GCE VM Connection Testing and Code
 
-### 4A.1 Confirm Connection Details
+### 4A.1 Connection Summary
 Display:
 ```
 CONNECTION SUMMARY
 ─────────────────────────────────
-Method: [Private IP / Public IP]
-Host: [IP_ADDRESS]
-Port: [3306/5432/1433 based on database type]
-Connection Name: [CLOUDSQL_CONNECTION_NAME]
+Method: {Private IP / Public IP with Auth Proxy}
+Host: {CLOUDSQL_PRIVATE_IP or "127.0.0.1 via Auth Proxy"}
+Port: {3306/5432/1433 based on database type}
+Connection Name: {CLOUDSQL_CONNECTION_NAME}
 ─────────────────────────────────
 ```
 
-### 4A.2 Quick Connectivity Test
-Offer to test connectivity from the VM:
+### 4A.2 Quick Connectivity Test (Optional)
+Offer to test connectivity from the VM. Determine command based on `CLOUDSQL_DATABASE_VERSION`:
 
 **For PostgreSQL:**
 ```bash
-gcloud compute ssh VM_NAME --zone=VM_ZONE --command="pg_isready -h CLOUDSQL_PRIVATE_IP -p 5432"
+gcloud compute ssh {VM_NAME} --zone={VM_ZONE} --command="pg_isready -h {CLOUDSQL_PRIVATE_IP} -p 5432"
 ```
 
 **For MySQL:**
 ```bash
-gcloud compute ssh VM_NAME --zone=VM_ZONE --command="mysqladmin ping -h CLOUDSQL_PRIVATE_IP --silent"
+gcloud compute ssh {VM_NAME} --zone={VM_ZONE} --command="mysqladmin ping -h {CLOUDSQL_PRIVATE_IP} --silent"
 ```
 
 **For SQL Server:**
 ```bash
-gcloud compute ssh VM_NAME --zone=VM_ZONE --command="nc -zv CLOUDSQL_PRIVATE_IP 1433"
+gcloud compute ssh {VM_NAME} --zone={VM_ZONE} --command="nc -zv {CLOUDSQL_PRIVATE_IP} 1433"
 ```
 
-### 4A.3 Language Selection
-```
-Select your programming language:
-1. Python
-2. Node.js
-3. Java
-4. Go
-5. PHP
-6. Ruby
+### 4A.3 Connection Code
 
-Enter choice (1-6):
-```
+Based on `CLOUDSQL_DATABASE_VERSION`, provide the appropriate connection code:
 
-### 4A.4 Code Snippets
-
-**Python (Private IP - PostgreSQL):**
+**Python + PostgreSQL:**
 ```python
 import sqlalchemy
+import os
 
-def connect_with_private_ip():
-    db_user = "your-db-user"
-    db_pass = "your-db-password"
-    db_name = "your-database"
-    db_host = "CLOUDSQL_PRIVATE_IP"
-    db_port = 5432
-
-    pool = sqlalchemy.create_engine(
-        sqlalchemy.engine.url.URL.create(
-            drivername="postgresql+pg8000",
-            username=db_user,
-            password=db_pass,
-            host=db_host,
-            port=db_port,
-            database=db_name,
-        ),
-        pool_size=5,
-        max_overflow=2,
-        pool_timeout=30,
-        pool_recycle=1800,
-    )
-    return pool
-
-# Usage
-engine = connect_with_private_ip()
-with engine.connect() as conn:
-    result = conn.execute(sqlalchemy.text("SELECT 1"))
-    print(result.fetchone())
-```
-
-**Python (Private IP - MySQL):**
-```python
-import sqlalchemy
-
-def connect_with_private_ip():
-    db_user = "your-db-user"
-    db_pass = "your-db-password"
-    db_name = "your-database"
-    db_host = "CLOUDSQL_PRIVATE_IP"
-    db_port = 3306
+def connect_to_cloud_sql():
+    db_user = os.environ.get("DB_USER", "your-db-user")
+    db_pass = os.environ.get("DB_PASS", "your-db-password")
+    db_name = os.environ.get("DB_NAME", "your-database")
+    db_host = "{CLOUDSQL_PRIVATE_IP}"
 
     pool = sqlalchemy.create_engine(
-        sqlalchemy.engine.url.URL.create(
-            drivername="mysql+pymysql",
-            username=db_user,
-            password=db_pass,
-            host=db_host,
-            port=db_port,
-            database=db_name,
-        ),
+        f"postgresql+pg8000://{db_user}:{db_pass}@{db_host}:5432/{db_name}",
         pool_size=5,
         max_overflow=2,
         pool_timeout=30,
@@ -265,139 +180,59 @@ def connect_with_private_ip():
     return pool
 ```
 
-**Node.js (Private IP - PostgreSQL):**
+**Python + MySQL:**
+```python
+import sqlalchemy
+import os
+
+def connect_to_cloud_sql():
+    db_user = os.environ.get("DB_USER", "your-db-user")
+    db_pass = os.environ.get("DB_PASS", "your-db-password")
+    db_name = os.environ.get("DB_NAME", "your-database")
+    db_host = "{CLOUDSQL_PRIVATE_IP}"
+
+    pool = sqlalchemy.create_engine(
+        f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:3306/{db_name}",
+        pool_size=5,
+        max_overflow=2,
+        pool_timeout=30,
+        pool_recycle=1800,
+    )
+    return pool
+```
+
+**Node.js + PostgreSQL:**
 ```javascript
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  user: 'your-db-user',
-  password: 'your-db-password',
-  database: 'your-database',
-  host: 'CLOUDSQL_PRIVATE_IP',
+  host: '{CLOUDSQL_PRIVATE_IP}',
   port: 5432,
+  user: process.env.DB_USER || 'your-db-user',
+  password: process.env.DB_PASS || 'your-db-password',
+  database: process.env.DB_NAME || 'your-database',
   max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
-
-async function query(text, params) {
-  const res = await pool.query(text, params);
-  return res.rows;
-}
-
-module.exports = { query };
-```
-
-**Node.js (Private IP - MySQL):**
-```javascript
-const mysql = require('mysql2/promise');
-
-const pool = mysql.createPool({
-  host: 'CLOUDSQL_PRIVATE_IP',
-  port: 3306,
-  user: 'your-db-user',
-  password: 'your-db-password',
-  database: 'your-database',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
 });
 
 module.exports = { pool };
 ```
 
-**Java (Private IP - JDBC PostgreSQL):**
-```java
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+**Node.js + MySQL:**
+```javascript
+const mysql = require('mysql2/promise');
 
-public class CloudSQLConnection {
-    private static final String DB_URL = "jdbc:postgresql://CLOUDSQL_PRIVATE_IP:5432/your-database";
-    private static final String USER = "your-db-user";
-    private static final String PASS = "your-db-password";
+const pool = mysql.createPool({
+  host: '{CLOUDSQL_PRIVATE_IP}',
+  port: 3306,
+  user: process.env.DB_USER || 'your-db-user',
+  password: process.env.DB_PASS || 'your-db-password',
+  database: process.env.DB_NAME || 'your-database',
+  waitForConnections: true,
+  connectionLimit: 10,
+});
 
-    public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL, USER, PASS);
-    }
-}
+module.exports = { pool };
 ```
-
-**Java (Private IP - JDBC MySQL):**
-```java
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-
-public class CloudSQLConnection {
-    private static final String DB_URL = "jdbc:mysql://CLOUDSQL_PRIVATE_IP:3306/your-database";
-    private static final String USER = "your-db-user";
-    private static final String PASS = "your-db-password";
-
-    public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL, USER, PASS);
-    }
-}
-```
-
-**Go (Private IP - PostgreSQL):**
-```go
-package main
-
-import (
-    "database/sql"
-    "fmt"
-    _ "github.com/lib/pq"
-)
-
-func connectWithPrivateIP() (*sql.DB, error) {
-    dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-        "CLOUDSQL_PRIVATE_IP", 5432, "your-db-user", "your-db-password", "your-database")
-
-    db, err := sql.Open("postgres", dsn)
-    if err != nil {
-        return nil, err
-    }
-
-    db.SetMaxOpenConns(10)
-    db.SetMaxIdleConns(5)
-
-    return db, nil
-}
-```
-
-**Go (Private IP - MySQL):**
-```go
-package main
-
-import (
-    "database/sql"
-    "fmt"
-    _ "github.com/go-sql-driver/mysql"
-)
-
-func connectWithPrivateIP() (*sql.DB, error) {
-    dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
-        "your-db-user", "your-db-password", "CLOUDSQL_PRIVATE_IP", 3306, "your-database")
-
-    db, err := sql.Open("mysql", dsn)
-    if err != nil {
-        return nil, err
-    }
-
-    db.SetMaxOpenConns(10)
-    db.SetMaxIdleConns(5)
-
-    return db, nil
-}
-```
-
-### 4A.5 Next Steps
-Recommend:
-- Store credentials in Secret Manager
-- Use IAM database authentication where possible
-- Implement connection pooling for production
-- Set up monitoring and alerting
 
 ---
 
@@ -408,13 +243,10 @@ Display:
 ✅ GCE VM → Cloud SQL connection setup complete!
 
 Summary:
-- Cloud SQL: [CLOUDSQL_INSTANCE_NAME]
-- GCE VM: [VM_NAME]
-- Connection Method: [Private IP / Public IP]
-- Host: [IP_ADDRESS]
+- Cloud SQL: {CLOUDSQL_INSTANCE_NAME}
+- GCE VM: {VM_NAME} ({VM_ZONE})
+- Connection Method: {Private IP / Public IP with Auth Proxy}
+- Host: {CLOUDSQL_PRIVATE_IP}
 
-Next steps:
-1. Store credentials securely (Secret Manager recommended)
-2. Test connection from your application
-3. Set up monitoring and alerting
+💡 Tip: Store credentials as environment variables or use Secret Manager
 ```
