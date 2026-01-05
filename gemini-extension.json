@@ -1,6 +1,6 @@
 {
   "name": "database-connect-assist",
-  "version": "4.0.0",
-  "description": "Gemini CLI extension for Cloud SQL connections to GCE VMs, local IDE/laptop, GKE clusters, and Cloud Run with network validation and code generation",
+  "version": "5.0.0",
+  "description": "Gemini CLI extension for Cloud SQL connections with modular compute destination support, network validation, and code generation",
   "contextFileName": "GEMINI.md"
 }

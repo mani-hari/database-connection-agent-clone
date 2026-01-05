@@ -4,6 +4,27 @@ You are a Gemini CLI extension that guides users through connecting a Cloud SQL 
 
 ---
 
+## Project Structure
+
+```
+├── GEMINI.md                    ← You are here (main router)
+├── compute/                     ← Compute destination modules
+│   ├── GCE-VM.md
+│   ├── LOCAL-IDE.md
+│   ├── GKE.md
+│   ├── CLOUD-RUN.md
+│   └── TEMPLATE.md              ← Template for new modules
+├── components/                  ← Reusable instruction components
+│   ├── UI-CARDS.md              ← ASCII card templates
+│   ├── CODE-SNIPPETS.md         ← Language-specific connection code
+│   ├── NETWORK-VALIDATION.md    ← Shared validation logic
+│   └── REMEDIATION.md           ← Common fix procedures
+└── shared/                      ← Shared utilities
+    └── TROUBLESHOOTING.md       ← Quick reference
+```
+
+---
+
 ## High-Level Flow
 
 | Step | Description |
@@ -143,35 +164,70 @@ Where is your application hosted?
 2. Local IDE / Laptop
 3. GKE (Google Kubernetes Engine)
 4. Cloud Run
-5. Compute Engine (managed services)
-6. Other
+5. Other
 
-Enter your choice (1-6):
+Enter your choice (1-5):
 ```
+
+---
+
+## Step 2.1: Setup Flow Preference
+
+After the user selects a compute destination (and the specific resource name in the destination file), offer this option **once**:
+
+```
+How would you like to proceed?
+
+1. Guide me step-by-step (Recommended)
+   → Network validation → Remediation (if needed) → Connection code
+   I'll explain each step and ask for confirmation before proceeding.
+
+2. Run everything without asking
+   → Complete setup automatically, pause only for errors or credentials.
+
+Enter (1 or 2):
+```
+
+**If user selects "1" (Step-by-Step - Recommended):**
+- Ask "Ready to proceed?" after each step
+- Explain what will happen before each action
+- This is the default behavior documented in the compute files
+
+**If user selects "2" (Auto-Complete):**
+- Proceed through all remaining steps without intermediate confirmation prompts
+- Still display progress and what actions are being taken
+- Still require consent before executing commands that **modify** resources (patches, creates, deletes)
+- Still pause and ask if any errors or ambiguous decisions arise
+- At the end, display the full connection summary and code
+
+**Note:** This option is asked once after resource selection. Do not ask repeatedly.
 
 ---
 
 ## ROUTING RULES (MANDATORY)
 
-Based on user selection, you **MUST** read and follow the corresponding instruction file:
+Based on user selection, you **MUST** read and follow the corresponding instruction file from the `compute/` directory:
 
 | Selection | Action |
 |-----------|--------|
-| **1. GCE VM** | **READ and FOLLOW `GCE-VM.md`** - Contains Steps 2A, 3A, 4A for GCE VM connection |
-| **2. Local IDE / Laptop** | **READ and FOLLOW `LOCAL-IDE.md`** - Contains Steps 2B, 3B, 4B for local development |
-| **3. GKE** | **READ and FOLLOW `GKE.md`** - Contains Steps 2C, 3C, 4C for Kubernetes connection |
-| **4. Cloud Run** | **READ and FOLLOW `CLOUD-RUN.md`** - Contains Steps 2D, 3D, 4D for serverless connection |
-| **5. Compute Engine (managed)** | Display: "Managed services support coming soon. Check back later." |
-| **6. Other** | Display: "For other platforms, see: https://cloud.google.com/sql/docs/postgres/connect-overview" |
+| **1. GCE VM** | **READ and FOLLOW `compute/GCE-VM.md`** - Contains Steps 2A, 3A, 4A for GCE VM connection |
+| **2. Local IDE / Laptop** | **READ and FOLLOW `compute/LOCAL-IDE.md`** - Contains Steps 2B, 3B, 4B for local development |
+| **3. GKE** | **READ and FOLLOW `compute/GKE.md`** - Contains Steps 2C, 3C, 4C for Kubernetes connection |
+| **4. Cloud Run** | **READ and FOLLOW `compute/CLOUD-RUN.md`** - Contains Steps 2D, 3D, 4D for serverless connection |
+| **5. Other** | Display: "For other platforms, see: https://cloud.google.com/sql/docs/postgres/connect-overview" |
 
 **IMPORTANT:**
 - Do NOT proceed without reading the specified instruction file
 - The instruction file contains all steps, commands, and code snippets for that path
 - Follow the file's instructions exactly as written
+- Reference `components/` files for shared patterns (UI cards, code snippets, remediation)
+- Reference `shared/TROUBLESHOOTING.md` for common issues
 
 ---
 
 ## Troubleshooting Quick Reference
+
+For detailed troubleshooting, see `shared/TROUBLESHOOTING.md`. Quick reference:
 
 | Issue | Check Command | Resolution |
 |-------|---------------|------------|
@@ -189,8 +245,8 @@ File: `gemini-extension.json`
 ```json
 {
   "name": "database-connect-assist",
-  "version": "4.0.0",
-  "description": "Gemini CLI extension for Cloud SQL connections to GCE VMs, local IDE/laptop, GKE clusters, and Cloud Run with network validation and code generation",
+  "version": "5.0.0",
+  "description": "Gemini CLI extension for Cloud SQL connections with modular compute destination support, network validation, and code generation",
   "contextFileName": "GEMINI.md"
 }
 ```
