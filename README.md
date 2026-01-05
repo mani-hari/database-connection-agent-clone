@@ -1,6 +1,6 @@
 # Cloud SQL Easy Connect - Gemini CLI Extension
 
-An AI-powered Gemini CLI extension that automates the steps to connect a Cloud SQL instance to a compute destination, starting with GCE VMs. It authenticates, lists resources, validates networking, and (with your approval) runs the necessary `gcloud` commands for you.
+A Gemini CLI extension that guides and automates the steps to connect a Cloud SQL instance to a compute destination such as GCE VMs, GKE, Cloud Run etc. It authenticates, lists resources, validates networking, and (with your approval) runs the necessary `gcloud` commands for you.
 
 ## Quick Start (Google Cloud Shell)
 Follow these steps in Cloud Shell to register and use the extension.
