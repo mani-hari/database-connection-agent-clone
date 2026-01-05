@@ -2,6 +2,12 @@
 
 **Prerequisites:** User has completed Step 0 (Authentication) and Step 1 (Cloud SQL Selection) from GEMINI.md.
 
+**Component References:**
+- UI patterns: See `../components/UI-CARDS.md` for ASCII card templates
+- Code snippets: See `../components/CODE-SNIPPETS.md` for connection code
+- Validation logic: See `../components/NETWORK-VALIDATION.md` for shared checks
+- Remediation: See `../components/REMEDIATION.md` for common fix procedures
+
 ---
 
 ## Step 2B: Local Development Setup
@@ -232,6 +238,100 @@ const pool = mysql.createPool({
 module.exports = { pool };
 ```
 
+### 4B.4 Alternative: Cloud SQL Connector (No Proxy Needed)
+
+Cloud SQL Connector libraries handle connection management automatically without needing a separate proxy process.
+
+**Python + PostgreSQL (Cloud SQL Connector):**
+```python
+# pip install cloud-sql-python-connector[pg8000]
+from google.cloud.sql.connector import Connector
+import sqlalchemy
+import os
+
+def connect_with_connector():
+    connector = Connector()
+
+    def getconn():
+        conn = connector.connect(
+            "{CLOUDSQL_CONNECTION_NAME}",
+            "pg8000",
+            user=os.environ.get("DB_USER", "your-db-user"),
+            password=os.environ.get("DB_PASS", "your-db-password"),
+            db=os.environ.get("DB_NAME", "your-database"),
+        )
+        return conn
+
+    pool = sqlalchemy.create_engine(
+        "postgresql+pg8000://",
+        creator=getconn,
+        pool_size=5,
+        max_overflow=2,
+    )
+    return pool
+```
+
+**Python + MySQL (Cloud SQL Connector):**
+```python
+# pip install cloud-sql-python-connector[pymysql]
+from google.cloud.sql.connector import Connector
+import sqlalchemy
+import os
+
+def connect_with_connector():
+    connector = Connector()
+
+    def getconn():
+        conn = connector.connect(
+            "{CLOUDSQL_CONNECTION_NAME}",
+            "pymysql",
+            user=os.environ.get("DB_USER", "your-db-user"),
+            password=os.environ.get("DB_PASS", "your-db-password"),
+            db=os.environ.get("DB_NAME", "your-database"),
+        )
+        return conn
+
+    pool = sqlalchemy.create_engine(
+        "mysql+pymysql://",
+        creator=getconn,
+        pool_size=5,
+        max_overflow=2,
+    )
+    return pool
+```
+
+**Node.js (Cloud SQL Connector):**
+```javascript
+// npm install @google-cloud/cloud-sql-connector
+const { Connector } = require('@google-cloud/cloud-sql-connector');
+
+async function connect() {
+  const connector = new Connector();
+  const clientOpts = await connector.getOptions({
+    instanceConnectionName: '{CLOUDSQL_CONNECTION_NAME}',
+  });
+
+  const { Pool } = require('pg');
+  const pool = new Pool({
+    ...clientOpts,
+    user: process.env.DB_USER || 'your-db-user',
+    password: process.env.DB_PASS || 'your-db-password',
+    database: process.env.DB_NAME || 'your-database',
+    max: 10,
+  });
+
+  return pool;
+}
+
+module.exports = { connect };
+```
+
+**Benefits of Cloud SQL Connector:**
+- No separate proxy process needed
+- Automatic IAM authentication support
+- Built-in connection management
+- Simpler deployment
+
 ---
 
 ## Completion
@@ -243,11 +343,17 @@ Display:
 Summary:
 - Cloud SQL: {CLOUDSQL_INSTANCE_NAME}
 - Connection Name: {CLOUDSQL_CONNECTION_NAME}
-- Method: Cloud SQL Auth Proxy on localhost
 
-To connect:
-1. Start Auth Proxy: ./cloud-sql-proxy {CLOUDSQL_CONNECTION_NAME} --port={PORT}
-2. Connect your app to: 127.0.0.1:{PORT}
+Two connection methods available:
+
+Option 1 - Cloud SQL Auth Proxy:
+  1. Start proxy: ./cloud-sql-proxy {CLOUDSQL_CONNECTION_NAME} --port={PORT}
+  2. Connect to: 127.0.0.1:{PORT}
+
+Option 2 - Cloud SQL Connector (recommended):
+  - No separate proxy needed
+  - Use language-specific connector library
+  - Automatic connection management
 
 💡 Tip: Store credentials as environment variables (add .env to .gitignore)
 ```

@@ -2,6 +2,12 @@
 
 **Prerequisites:** User has completed Step 0 (Authentication) and Step 1 (Cloud SQL Selection) from GEMINI.md.
 
+**Component References:**
+- UI patterns: See `../components/UI-CARDS.md` for ASCII card templates
+- Code snippets: See `../components/CODE-SNIPPETS.md` for connection code
+- Validation logic: See `../components/NETWORK-VALIDATION.md` for shared checks
+- Remediation: See `../components/REMEDIATION.md` for common fix procedures
+
 ---
 
 ## Step 2C: Fetch and Select GKE Cluster
