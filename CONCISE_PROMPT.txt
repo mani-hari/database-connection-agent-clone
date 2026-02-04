@@ -1,0 +1,34 @@
+mkdir -p ~/connectivity && cd ~/connectivity && gemini -i '
+Your goal is to establish and validate a connection between a Cloud SQL instance and a GCE VM. Follow these exact steps in order:
+
+Step 1: Identify Cloud SQL Instance
+- Run: gcloud sql instances list --format="table(name,databaseVersion,region,state)"
+- Run: gcloud sql instances describe {INSTANCE_NAME} --format="yaml(name,connectionName,ipAddresses,settings.ipConfiguration.privateNetwork,region)"
+- Extract: Private IP, Public IP, VPC network, Connection Name
+
+Step 2: Identify GCE VM
+- Run: gcloud compute instances list --format="table(name,zone,machineType.basename(),status)"
+- Run: gcloud compute instances describe {VM_NAME} --zone={VM_ZONE} --format="yaml(name,networkInterfaces[].network,networkInterfaces[].networkIP)"
+- Extract: VM Internal IP, VM VPC network
+
+Step 3: Validate Network Configuration
+- Compare Cloud SQL VPC and VM VPC (must match for Private IP connection)
+- Run: gcloud services vpc-peerings list --network={VM_VPC} --project={PROJECT_ID}
+- Check if Private Services Access exists for servicenetworking.googleapis.com
+
+Step 4: Determine Connection Method
+- If Private IP exists AND VPCs match AND Private Services Access exists: Use Private IP connection
+- If VPCs do not match: Offer remediation with gcloud sql instances patch
+- If no Private IP: Recommend Cloud SQL Auth Proxy
+
+Step 5: Provide Connection Code
+- Display connection summary (Method, Host, Port, Connection Name)
+- Generate database-specific connection code (Python/Node.js for PostgreSQL/MySQL/SQL Server)
+- Optionally test with: gcloud compute ssh {VM_NAME} --zone={VM_ZONE} --command="pg_isready -h {HOST} -p {PORT}"
+
+Output Format:
+- Use ASCII tables to display network analysis results
+- Show checkmarks (✅/❌) for each validation step
+- If any step fails, provide the exact gcloud command to fix it
+- End with "Next Step" recommendation
+'

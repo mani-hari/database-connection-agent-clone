@@ -1,0 +1,24 @@
+gemini -i '
+Connect Cloud SQL to GCE VM. Follow these steps exactly:
+
+1. List Cloud SQL instances: gcloud sql instances list
+   Describe selected: gcloud sql instances describe {NAME}
+   Extract: Private IP, VPC, Connection Name
+
+2. List VMs: gcloud compute instances list
+   Describe selected: gcloud compute instances describe {VM} --zone={ZONE}
+   Extract: VM Internal IP, VM VPC
+
+3. Validate: Check if Cloud SQL VPC = VM VPC
+   Check Private Services Access: gcloud services vpc-peerings list --network={VPC}
+
+4. If VPCs match + Private IP exists: Direct connection via Private IP
+   If VPCs differ: Run gcloud sql instances patch to fix
+   If no Private IP: Use Cloud SQL Auth Proxy
+
+5. Display connection summary with Host, Port, Method
+   Generate connection code for the database type
+   Test with: gcloud compute ssh {VM} --command="pg_isready -h {HOST} -p {PORT}"
+
+Show results in ASCII tables with ✅/❌. Provide exact fix commands if steps fail.
+'
