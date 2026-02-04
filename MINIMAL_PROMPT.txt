@@ -14,5 +14,5 @@ Step 4: Connection Code and Testing
 Show connection summary (Method, Host, Port). Generate database-specific code (Python/Node.js). Test with: gcloud compute ssh {VM} --command="pg_isready -h {HOST} -p {PORT}"
 
 Output Rules:
-Keep all explanations to 1-2 lines maximum. Use ASCII tables for network analysis. If any check fails, provide the exact gcloud fix command. End with Next Step recommendation.
+Keep all explanations to 1-2 lines maximum. Use ASCII tables for network analysis and all outputs so that it is easy to read. If any check fails, provide the exact gcloud fix command. End with Next Step recommendation.
 '
