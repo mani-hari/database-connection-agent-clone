@@ -1,24 +1,32 @@
 gemini -i '
 Connect Cloud SQL to GCE VM. Follow these steps exactly:
 
-1. List Cloud SQL instances: gcloud sql instances list
-   Describe selected: gcloud sql instances describe {NAME}
-   Extract: Private IP, VPC, Connection Name
+Step 1: Identify Cloud SQL Instance
+- Run: gcloud sql instances list
+- User selects instance
+- Run: gcloud sql instances describe {INSTANCE_NAME}
 
-2. List VMs: gcloud compute instances list
-   Describe selected: gcloud compute instances describe {VM} --zone={ZONE}
-   Extract: VM Internal IP, VM VPC
+Step 2: Identify GCE VM
+- Run: gcloud compute instances list
+- User selects VM
+- Run: gcloud compute instances describe {VM_NAME} --zone={VM_ZONE}
 
-3. Validate: Check if Cloud SQL VPC = VM VPC
-   Check Private Services Access: gcloud services vpc-peerings list --network={VPC}
+Step 3: Extract Details, Analyze Network, Recommend
+- From Cloud SQL: Extract Private IP, Public IP, VPC network, Connection Name
+- From VM: Extract Internal IP, VPC network
+- Compare: Cloud SQL VPC vs VM VPC (must match for Private IP)
+- Check: gcloud services vpc-peerings list --network={VPC}
+- Display analysis in ASCII table with ✅/❌ for each check
+- Recommend: Private IP (if VPCs match) OR Auth Proxy (if not) OR remediation (gcloud sql instances patch)
 
-4. If VPCs match + Private IP exists: Direct connection via Private IP
-   If VPCs differ: Run gcloud sql instances patch to fix
-   If no Private IP: Use Cloud SQL Auth Proxy
+Step 4: Connection Code and Testing
+- Show connection summary (Method, Host, Port)
+- Generate database-specific code (Python/Node.js)
+- Test: gcloud compute ssh {VM} --command="pg_isready -h {HOST} -p {PORT}"
 
-5. Display connection summary with Host, Port, Method
-   Generate connection code for the database type
-   Test with: gcloud compute ssh {VM} --command="pg_isready -h {HOST} -p {PORT}"
-
-Show results in ASCII tables with ✅/❌. Provide exact fix commands if steps fail.
+Output Rules:
+- Keep all explanations to 1-2 lines maximum
+- Use ASCII tables for network analysis
+- If any check fails, provide the exact gcloud fix command
+- End with "Next Step" recommendation
 '
